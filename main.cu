@@ -1,7 +1,6 @@
 
 #include <bits/stdc++.h>
 
-
 using label_t = std::string;
 using adj_list_t = std::unordered_map<label_t, float>;
 //using adj_list_t = std::set<std::pair<label_t, float>>;
@@ -9,11 +8,11 @@ using label_set_t = std::unordered_set<label_t>;
 using graph_t = std::unordered_map<label_t, adj_list_t>;
 using edge_t = std::tuple<label_t, label_t, float>;
 
-static edge_t edge_from_string(std::string s) {
+static edge_t edge_from_tsv_string(std::string s) {
     std::string first, second;
     std::stringstream str(s);
     str >> first >> second;
-    return std::make_tuple(first, second, 1.0f);
+    return std::make_tuple(first, second, 5.0f);
 }
 
 
@@ -43,8 +42,9 @@ static graph_t graph_from_tsv(std::string fname) {
     
     while(std::getline(file, line, '\n')) {
         if(line.starts_with("#")) continue;
-        auto edge = edge_from_string(line);
+        auto edge = edge_from_tsv_string(line);
         g[edge_start(edge)].insert(make_pair(edge_end(edge), edge_weight(edge)));
+        g[edge_end(edge)]; // in case of leaves
     }
 
     return g;
@@ -60,7 +60,10 @@ adj_list_t find_light_edges(const graph_t& g,
     for(const auto& v: frontier) {
         for(const auto& [w, weight]: g.at(v)) {
             if(weight <= thresh) {
-                edges[w] = dist.at(v) + weight;
+                if(edges.contains(w))
+                    edges[w] = std::min(dist.at(v) + weight, edges[w]);
+                else
+                    edges[w] = dist.at(v) + weight;
             }
         }
     }
@@ -76,7 +79,10 @@ adj_list_t find_heavy_edges(const graph_t& g,
     for(const auto& v: frontier) {
         for(const auto& [w, weight]: g.at(v)) {
             if(weight > thresh) {
-                edges[w] = dist.at(v) + weight;
+                if(edges.contains(w))
+                    edges[w] = std::min(dist.at(v) + weight, edges[w]);
+                else
+                    edges[w] = dist.at(v) + weight;
             }
         }
     }
@@ -85,7 +91,8 @@ adj_list_t find_heavy_edges(const graph_t& g,
 
 
 static size_t bucket_pos(float cost, float thresh, size_t n_buckets) {
-    if(cost == std::numeric_limits<float>::infinity()) return 0;
+    if(cost == std::numeric_limits<float>::infinity())
+        return 0;
     return static_cast<int>(std::floor(cost/thresh)) % n_buckets;
 }
 
@@ -95,6 +102,7 @@ void relax_edges(const adj_list_t reqs,
                  std::vector<std::unordered_set<label_t>>& buckets)
 {
     for(auto& [w, x]: reqs) {
+
         if(x < dist[w]) {
             auto old_bucket_pos = bucket_pos(dist[w], 1.0f, buckets.size());
             auto new_bucket_pos = bucket_pos(x, 1.0f, buckets.size());
@@ -123,18 +131,26 @@ static graph_t load_soc_bitcon_graph() {
     return g;
 }
 
+static graph_t load_wiki_talk_graph() {
+    std::string fname = "wiki-Talk.txt";
+    return graph_from_tsv(fname);
+    
+}
+
 
 
 int main() {
 
-    auto g = load_soc_bitcon_graph();
+//    auto g = load_soc_bitcon_graph();
+    auto g = load_wiki_talk_graph();
 
     std::map<label_t, float> dist;
     std::vector<std::unordered_set<label_t>> buckets(20);
+
     
-    for(auto& v: g) {
-        dist[v.first] = std::numeric_limits<float>::infinity();
-        buckets[bucket_pos(dist[v.first], 1.0f, buckets.size())].insert(v.first);
+    for(auto& [v, _]: g) {
+        dist[v] = std::numeric_limits<float>::infinity();
+        buckets[bucket_pos(dist[v], 1.0f, buckets.size())].insert(v);
     }
 
     std::string s;
@@ -164,15 +180,16 @@ int main() {
 
         label_set_t tmp_bucket;
         adj_list_t reqs;
+
         
         while(!buckets[current_bucket.value()].empty()) {
             reqs = find_light_edges(g, 1.0f, buckets[current_bucket.value()], dist);
+
             tmp_bucket.merge(buckets[current_bucket.value()]);
             buckets[current_bucket.value()].clear();
-            if(tmp_bucket.empty()) std::cout << "tmp_bucket is now empty" << std::endl;
             relax_edges(reqs, dist, buckets);
         }
-
+        
         reqs = find_heavy_edges(g, 1.0f, tmp_bucket, dist);
         relax_edges(reqs, dist, buckets);
 
@@ -185,10 +202,10 @@ int main() {
         }
     }
 
+    
+    std::cout << "DIST\tVERT\n";
     for(auto [v, x]: dist) {
-        std::cout << v << " - " << x << '\n';
+        std::cout << x << "\t " << v << '\n';
     }
     std::cout << std::endl;
-
-
 }
