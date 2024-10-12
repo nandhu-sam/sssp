@@ -1,34 +1,13 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
 
-#include <limits>
-
-#include <tuple>
-#include <vector>
-#include <utility>
-#include <unordered_map>
-#include <unordered_set>
-#include <set>
-#include <map>
+#include <bits/stdc++.h>
 
 
-using weight_t = float;
 using label_t = std::string;
-using edge_t = std::tuple<label_t, label_t, weight_t>;
-
-
-using edge_list_t = std::map<std::pair<label_t, label_t>, weight_t>;
-
-
-using adj_list_t = std::unordered_set<label_t>;
-// using adj_list_t = std::unordered_set<std::pair<label_t, float>>
+using adj_list_t = std::unordered_map<label_t, float>;
+//using adj_list_t = std::set<std::pair<label_t, float>>;
+using label_set_t = std::unordered_set<label_t>;
 using graph_t = std::unordered_map<label_t, adj_list_t>;
-
-static label_t edge_start(const edge_t& e) { return std::get<0>(e); }
-static label_t edge_end(const edge_t& e) { return std::get<1>(e); }
-static weight_t edge_weight(const edge_t& e) { return std::get<2>(e); }
-
+using edge_t = std::tuple<label_t, label_t, float>;
 
 static edge_t edge_from_string(std::string s) {
     std::string first, second;
@@ -38,13 +17,21 @@ static edge_t edge_from_string(std::string s) {
 }
 
 
+static label_t edge_start(edge_t t) { return std::get<0>(t); }
+static label_t edge_end(edge_t t) { return std::get<1>(t); }
+static float edge_weight(edge_t t) { return std::get<2>(t); }
+
+
 static edge_t edge_from_csv_string(std::string s) {
-  std::string first, second, weight;
-  std::stringstream str(s);
-  std::getline(str, first, ',');
-  std::getline(str, second, ',');
-  std::getline(str, weight, ',');
-  return make_tuple(first, second, std::stof(weight));
+    
+    std::string first, second, weight;
+    std::stringstream str(s);
+    std::getline(str, first, ',');
+    std::getline(str, second, ',');
+    std::getline(str, weight, ',');
+    float f = std::stof(weight);
+    return make_tuple(first, second, f+10.0);
+    
 }
 
 
@@ -57,66 +44,151 @@ static graph_t graph_from_tsv(std::string fname) {
     while(std::getline(file, line, '\n')) {
         if(line.starts_with("#")) continue;
         auto edge = edge_from_string(line);
-        g[edge_start(edge)].insert(edge_end(edge));
+        g[edge_start(edge)].insert(make_pair(edge_end(edge), edge_weight(edge)));
     }
 
     return g;
 }
 
 
-static std::pair<graph_t, edge_list_t> weighted_graph_from_csv(std::string fname) {
+
+adj_list_t find_light_edges(const graph_t& g,
+                            float thresh,
+                            const label_set_t& frontier,
+                            const std::map<label_t, float> dist) {
+    adj_list_t edges;
+    for(const auto& v: frontier) {
+        for(const auto& [w, weight]: g.at(v)) {
+            if(weight <= thresh) {
+                edges[w] = dist.at(v) + weight;
+            }
+        }
+    }
+    return edges;
+}
+
+
+adj_list_t find_heavy_edges(const graph_t& g,
+                            float thresh,
+                            const label_set_t& frontier,
+                            const std::map<label_t, float>& dist) {
+    adj_list_t edges;
+    for(const auto& v: frontier) {
+        for(const auto& [w, weight]: g.at(v)) {
+            if(weight > thresh) {
+                edges[w] = dist.at(v) + weight;
+            }
+        }
+    }
+    return edges;
+}
+
+
+static size_t bucket_pos(float cost, float thresh, size_t n_buckets) {
+    if(cost == std::numeric_limits<float>::infinity()) return 0;
+    return static_cast<int>(std::floor(cost/thresh)) % n_buckets;
+}
+
+
+void relax_edges(const adj_list_t reqs,
+                 std::map<label_t, float>& dist,
+                 std::vector<std::unordered_set<label_t>>& buckets)
+{
+    for(auto& [w, x]: reqs) {
+        if(x < dist[w]) {
+            auto old_bucket_pos = bucket_pos(dist[w], 1.0f, buckets.size());
+            auto new_bucket_pos = bucket_pos(x, 1.0f, buckets.size());
+            buckets[old_bucket_pos].erase(w);
+            buckets[new_bucket_pos].insert(w);
+            dist[w] = x;
+        }
+    }
+}
+                 
+
+
+static graph_t load_soc_bitcon_graph() {
+    std::string fname = "soc-sign-bitcoinalpha.csv";
+
     auto file = std::ifstream(fname);
     graph_t g;
-    edge_list_t edge_list;
     std::string line;
     
     while(std::getline(file, line, '\n')) {
         auto edge = edge_from_csv_string(line);
-        g[edge_start(edge)].insert(edge_end(edge));
-        edge_list[std::make_pair(edge_start(edge), edge_end(edge))] = edge_weight(edge);
+        g[edge_start(edge)].insert(make_pair(edge_end(edge), edge_weight(edge)));
+        g[edge_end(edge)]; // in case of leaves
     }
 
-    return make_pair(g, edge_list);
-    
+    return g;
 }
+
 
 
 int main() {
 
+    auto g = load_soc_bitcon_graph();
+
+    std::map<label_t, float> dist;
+    std::vector<std::unordered_set<label_t>> buckets(20);
     
-    std::cout << "reading graph...\t";
-    std::cout.flush();
-    auto [graph, what] = weighted_graph_from_csv("soc-sign-bitcoinalpha.csv");
-    std::cout << "done" << std::endl;
-
-    std::cout << "enter a vertex: ";
-    std::string v_0;
-    std::cin >> v_0;
-
-    size_t n_vertices = graph.size();
-    std::unordered_set<label_t> frontier;
-    std::unordered_map<label_t, bool> visited(n_vertices);
-    std::unordered_map<label_t, float> distance(n_vertices);
-    
-
-    if(!graph.contains(v_0)) {
-        std::cerr << "bad vertex" << std::endl;
-        return 1;
+    for(auto& v: g) {
+        dist[v.first] = std::numeric_limits<float>::infinity();
+        buckets[bucket_pos(dist[v.first], 1.0f, buckets.size())].insert(v.first);
     }
-    else {
-        std:: cout << "vertex " << v_0 << " exists\n"
-                   << "adjacents are: ";
-        for(auto x: graph[v_0]) {
-            std::cout << x << ' ';
+
+    std::string s;
+
+    while(true) {
+        std::cout << "source vertex?: ";
+        std::cin >> s;
+        if(!(g.contains(s))) {
+            std::cout << "vertex '" << s << "' not found" << std::endl;
         }
-        std::cout << std::endl;
+        break;
+    };
+
+
+    dist[s] = 0.0f;
+
+    std::optional<size_t> current_bucket;
+    for(size_t i=0; i<buckets.size(); i++) {
+        if(!buckets[i].empty()) {
+            current_bucket = i;
+            break;
+        }
     }
-         
-    
-    frontier.insert(v_0);
-    visited[v_0] = true;
-    distance[v_0] = 0.0f;
-
 
     
+    while(current_bucket) {
+
+        label_set_t tmp_bucket;
+        adj_list_t reqs;
+        
+        while(!buckets[current_bucket.value()].empty()) {
+            reqs = find_light_edges(g, 1.0f, buckets[current_bucket.value()], dist);
+            tmp_bucket.merge(buckets[current_bucket.value()]);
+            buckets[current_bucket.value()].clear();
+            if(tmp_bucket.empty()) std::cout << "tmp_bucket is now empty" << std::endl;
+            relax_edges(reqs, dist, buckets);
+        }
+
+        reqs = find_heavy_edges(g, 1.0f, tmp_bucket, dist);
+        relax_edges(reqs, dist, buckets);
+
+        current_bucket.reset();
+        for(size_t i=0; i<buckets.size(); i++) {
+            if(!buckets[i].empty()) {
+                current_bucket = i;
+                break;
+            }
+        }
+    }
+
+    for(auto [v, x]: dist) {
+        std::cout << v << " - " << x << '\n';
+    }
+    std::cout << std::endl;
+
+
 }
