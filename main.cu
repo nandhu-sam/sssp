@@ -145,63 +145,6 @@ int main() {
     auto g = load_wiki_talk_graph();
 
     std::map<label_t, float> dist;
-    std::vector<std::unordered_set<label_t>> buckets(20);
-
-    
-    for(auto& [v, _]: g) {
-        dist[v] = std::numeric_limits<float>::infinity();
-        buckets[bucket_pos(dist[v], 1.0f, buckets.size())].insert(v);
-    }
-
-    std::string s;
-
-    while(true) {
-        std::cout << "source vertex?: ";
-        std::cin >> s;
-        if(!(g.contains(s))) {
-            std::cout << "vertex '" << s << "' not found" << std::endl;
-        }
-        break;
-    };
-
-
-    dist[s] = 0.0f;
-
-    std::optional<size_t> current_bucket;
-    for(size_t i=0; i<buckets.size(); i++) {
-        if(!buckets[i].empty()) {
-            current_bucket = i;
-            break;
-        }
-    }
-
-    
-    while(current_bucket) {
-
-        label_set_t tmp_bucket;
-        adj_list_t reqs;
-
-        
-        while(!buckets[current_bucket.value()].empty()) {
-            reqs = find_light_edges(g, 1.0f, buckets[current_bucket.value()], dist);
-
-            tmp_bucket.merge(buckets[current_bucket.value()]);
-            buckets[current_bucket.value()].clear();
-            relax_edges(reqs, dist, buckets);
-        }
-        
-        reqs = find_heavy_edges(g, 1.0f, tmp_bucket, dist);
-        relax_edges(reqs, dist, buckets);
-
-        current_bucket.reset();
-        for(size_t i=0; i<buckets.size(); i++) {
-            if(!buckets[i].empty()) {
-                current_bucket = i;
-                break;
-            }
-        }
-    }
-
     
     std::cout << "DIST\tVERT\n";
     for(auto [v, x]: dist) {
