@@ -194,8 +194,8 @@ static void print_labels_of_graph(graph_t g) { // debug
 int main() {
 
 //    auto g = load_soc_bitcon_graph();
-    auto g = load_wiki_talk_graph();
-//    auto g = sample_graph();
+//    auto g = load_wiki_talk_graph();
+    auto g = sample_graph();
 //    print_labels_of_graph(g);
     
 
@@ -238,8 +238,7 @@ int main() {
         
         for(const auto& v: frontier) {
             bool visited_all = true;
-            const auto& g_v = g[v];
-            for(const auto& [w, weight]: g_v) {
+            for(const auto& [w, weight]: g[v]) {
 
                 float path_cost = dist[v] + weight;
                 
@@ -257,7 +256,6 @@ int main() {
         }
         
         for(const auto& x: frontier_delete_list) {
-            std::cout << x << " removed from frontier\n"; // debug
             frontier.erase(x);
         }
 
@@ -265,14 +263,8 @@ int main() {
         dist[min_label] = min_cost;
         visited[min_label] = true;
         frontier.insert(min_label);
-        std::cout << min_label << " added to frontier\n"; // debug
+
         
-
-        // std::cout << "'" << min_label << "'\n";
-        // std::cout << "'" << min_cost << "'\n";
-
-        // int n;
-        // std::cin >> n;
 
     }
 
