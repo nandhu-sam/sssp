@@ -70,7 +70,7 @@ void relax_edges(const adj_list_t reqs,
 
 
 int main() {
-
+  // non parallel
 //    auto g = load_soc_bitcon_graph();
 ///   auto g = load_wiki_talk_graph();
     auto g = sample_graph();
