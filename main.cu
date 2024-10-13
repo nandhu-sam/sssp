@@ -131,6 +131,47 @@ static graph_t load_soc_bitcon_graph() {
     return g;
 }
 
+
+static graph_t load_sample_graph() {
+    
+    graph_t g;
+    g["a"]["b"] = 1;
+    g["a"]["c"] = 4;
+
+    g["b"]["a"] = 1;
+    g["b"]["c"] = 2;
+    g["b"]["g"] = 4;
+    g["b"]["h"] = 2;
+    
+    g["c"]["a"] = 4;
+    g["c"]["b"] = 1;
+    g["c"]["d"] = 1;
+    g["c"]["e"] = 3;
+
+    g["d"]["c"] = 1;
+    g["d"]["e"] = 1;
+    g["d"]["f"] = 3;
+    g["d"]["g"] = 1;
+
+    g["e"]["c"] = 3;
+    g["e"]["d"] = 1;
+    g["e"]["f"] = 1;
+    
+    g["f"]["d"] = 3;
+    g["f"]["e"] = 1;
+    g["f"]["g"] = 6;
+
+    g["g"]["b"] = 4;
+    g["g"]["d"] = 1;
+    g["g"]["f"] = 6;
+    g["g"]["h"] = 14;
+
+    g["h"]["b"] = 2;
+    g["h"]["g"] = 14;
+
+    return g;
+}
+
 static graph_t load_wiki_talk_graph() {
     std::string fname = "wiki-Talk.txt";
     return graph_from_tsv(fname);
@@ -142,7 +183,8 @@ static graph_t load_wiki_talk_graph() {
 int main() {
 
 //    auto g = load_soc_bitcon_graph();
-    auto g = load_wiki_talk_graph();
+//    auto g = load_wiki_talk_graph();
+    auto g = load_sample_graph();
 
     std::map<label_t, float> dist;
     std::vector<std::unordered_set<label_t>> buckets(20);
