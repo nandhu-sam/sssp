@@ -22,15 +22,17 @@ static float edge_weight(edge_t t) { return std::get<2>(t); }
 
 
 static edge_t edge_from_csv_string(std::string s) {
-    
+
+
     std::string first, second, weight;
     std::stringstream str(s);
     std::getline(str, first, ',');
     std::getline(str, second, ',');
     std::getline(str, weight, ',');
     float f = std::stof(weight);
-    return make_tuple(first, second, f+10.0);
-    
+    return make_tuple(first, second, f+11.0);
+
+
 }
 
 
@@ -39,7 +41,8 @@ static graph_t graph_from_tsv(std::string fname) {
     auto file = std::ifstream(fname);
     graph_t g;
     std::string line;
-    
+
+
     while(std::getline(file, line, '\n')) {
         if(line.starts_with("#")) continue;
         auto edge = edge_from_tsv_string(line);
@@ -112,7 +115,8 @@ void relax_edges(const adj_list_t reqs,
         }
     }
 }
-                 
+
+
 
 
 static graph_t load_soc_bitcon_graph() {
@@ -121,7 +125,8 @@ static graph_t load_soc_bitcon_graph() {
     auto file = std::ifstream(fname);
     graph_t g;
     std::string line;
-    
+
+
     while(std::getline(file, line, '\n')) {
         auto edge = edge_from_csv_string(line);
         g[edge_start(edge)].insert(make_pair(edge_end(edge), edge_weight(edge)));
@@ -134,21 +139,149 @@ static graph_t load_soc_bitcon_graph() {
 static graph_t load_wiki_talk_graph() {
     std::string fname = "wiki-Talk.txt";
     return graph_from_tsv(fname);
+
+
+}
+
+static graph_t sample_graph() {
     
+    graph_t g;
+    g["a"]["b"] = 1;
+    g["a"]["c"] = 4;
+
+    g["b"]["a"] = 1;
+    g["b"]["c"] = 2;
+    g["b"]["g"] = 4;
+    g["b"]["h"] = 2;
+    
+    g["c"]["a"] = 4;
+    g["c"]["b"] = 1;
+    g["c"]["d"] = 1;
+    g["c"]["e"] = 3;
+
+    g["d"]["c"] = 1;
+    g["d"]["e"] = 1;
+    g["d"]["f"] = 3;
+    g["d"]["g"] = 1;
+
+    g["e"]["c"] = 3;
+    g["e"]["d"] = 1;
+    g["e"]["f"] = 1;
+    
+    g["f"]["d"] = 3;
+    g["f"]["e"] = 1;
+    g["f"]["g"] = 6;
+
+    g["g"]["b"] = 4;
+    g["g"]["d"] = 1;
+    g["g"]["f"] = 6;
+    g["g"]["h"] = 14;
+
+    g["h"]["b"] = 2;
+    g["h"]["g"] = 14;
+
+    return g;
 }
 
 
+
+static void print_labels_of_graph(graph_t g) { // debug
+    for(const auto& [v, _]: g)
+        std::cout << "'" << v << "' ";
+    std::cout << std::endl;
+}
 
 int main() {
 
 //    auto g = load_soc_bitcon_graph();
     auto g = load_wiki_talk_graph();
-
-    std::map<label_t, float> dist;
+//    auto g = sample_graph();
+//    print_labels_of_graph(g);
     
+
+    std::unordered_map<label_t, float> dist;
+    std::unordered_map<label_t, bool> visited;
+    std::unordered_set<label_t> frontier;
+
+
+    for(const auto& [label, _]: g) {
+        dist[label] = std::numeric_limits<float>::infinity();
+        visited[label] = false;
+    }
+
+    std::string s;
+
+    while(true) {
+        std::cout << "source vertex?: ";
+        std::cin >> s;
+        if(!(g.contains(s))) {
+            std::cout << "vertex '" << s << "' not found" << std::endl;
+            continue;
+        }
+
+        break;
+    }
+
+    frontier.insert(s);
+    dist[s] = 0.0;
+    visited[s] = true;
+
+    auto count = g.size();
+
+    while(!frontier.empty()) {
+
+        std::cout.flush();
+        float min_cost = std::numeric_limits<float>::infinity();
+        label_t min_label;
+
+        std::set<label_t> frontier_delete_list;
+        
+        for(const auto& v: frontier) {
+            bool visited_all = true;
+            const auto& g_v = g[v];
+            for(const auto& [w, weight]: g_v) {
+
+                float path_cost = dist[v] + weight;
+                
+                if(visited[w]) continue;
+                else visited_all = false;
+                
+                if(path_cost < min_cost) {
+                    min_cost = path_cost;
+                    min_label = w;
+                }
+            }
+            if(visited_all) {
+                frontier_delete_list.insert(v);
+            }
+        }
+        
+        for(const auto& x: frontier_delete_list) {
+            std::cout << x << " removed from frontier\n"; // debug
+            frontier.erase(x);
+        }
+
+        if(min_label.empty()) break;
+        dist[min_label] = min_cost;
+        visited[min_label] = true;
+        frontier.insert(min_label);
+        std::cout << min_label << " added to frontier\n"; // debug
+        
+
+        // std::cout << "'" << min_label << "'\n";
+        // std::cout << "'" << min_cost << "'\n";
+
+        // int n;
+        // std::cin >> n;
+
+    }
+
+
+
+
     std::cout << "DIST\tVERT\n";
-    for(auto [v, x]: dist) {
-        std::cout << x << "\t " << v << '\n';
+    for(auto& [v, x]: dist) {
+        std::cout << x << "\t" << v << '\n';
     }
     std::cout << std::endl;
 }
