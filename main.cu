@@ -14,131 +14,72 @@
 extern __global__ void device_print_adj_list(size_t* adj_list_lens, size_t n_vertx, adj_vert_t** adj_list);
 
 
-struct frontier_hash {
-    size_t idx;
-    UT_hash_handle hh;
-};
+// struct frontier_list {
+//     size_t idx;
+//     struct frontier_list* next, prev;
+// };
+
+void single_source_shortest_paths(size_t n_vertx,
+                                  size_t* adj_lens,
+                                  adj_vert_t** adj_list,
+                                  float* dist,
+                                  size_t s);
+
+int main(int argc, char** argv) {
+
+    std::tuple<label_list_t, size_t*, adj_vert_t**> graph;
+    std::string s;
+    size_t s_idx;
 
 
-int main() {
-    
-    auto [label_list, adj_list_lens, adj_list] = load_soc_bitcon_graph();
-    
+    if(argc == 2) {
 
-    std::unordered_set<std::string> frontier;
-
-    for(size_t i =0; i<label_list.size(); ++i) {
-        dist[i] = std::numeric_limits<float>::infinity();
-        visited[i] = false;
+        std::string name(argv[1]);
+        if(name == "sample") {
+            graph = load_sample_graph();
+            s = "a";
+        }
+        else if(name == "bitcoin") {
+            graph = load_soc_bitcoin_graph();
+            s = "3";
+        }
+        else {
+            std::cout << "wrong graph: " << name << "\n";
+            return 1;
+        }
+    } else {
+        std::cout << "no graph specified\n";
+        return 1;
     }
 
-    // memory to be initialized at kernel
-    
+
+    auto& [label_list, adj_list_lens, adj_list] = graph;
+    auto it_loc = std::find(label_list.begin(), label_list.end(), s);
+    s_idx = std::distance(label_list.begin(), it_loc);
+            
+
     float* dist;
-    bool* visited;
-
     CUDA_SAFE_CALL(cudaMallocManaged(&dist, sizeof(float)*label_list.size()));
-    CUDA_SAFE_CALL(cudaMallocManaged(&visited, sizeof(bool)*label_list.size()));
 
-    
-    std::string s;
 
-    while(true) {
-        std::cout << "source vertex?: ";
-        std::cin >> s;
-        auto it_loc = std::find(label_list.begin(), label_list.end(), s);
-        if(it_loc == label_list.end()) {
-            std::cout << "vertex '" << s << "' not found" << std::endl;
-            continue;
-        }
 
-        break;
-    }
+    // while(false) {
+    //     std::cout << "source vertex?: ";
+    //     std::cin >> s;
+    //     auto it_loc = std::find(label_list.begin(), label_list.end(), s);
+    //     if(it_loc == label_list.end()) {
+    //         std::cout << "vertex '" << s << "' not found" << std::endl;
+    //         continue;
+    //     }
+    //     s_idx = std::distance(label_list.begin(), it_loc);
+    //     break;
+    // }
 
-    
-    
+    single_source_shortest_paths(label_list.size(), adj_list_lens, adj_list, dist, s_idx);
+    cudaDeviceSynchronize();
+
+    // for(size_t i=0; i<label_list.size(); ++i) {
+    //     std::cout << dist[i] << " = " << label_list[i] <<  '\n';
+    // }
 
 }
-
-#if 0
-static int old_main() {
-
-//    auto g = load_soc_bitcon_graph();
-///   auto g = load_wiki_talk_graph();
-    auto [label_list, adj_list_lens, adj_list] = sample_graph();
-//    print_labels_of_graph(g);
-    
-    std::vector<float> dist(label_list.size());
-    std::vector<bool> visited(label_list.size());
-    std::unordered_set<std::string> frontier;
-
-    for(size_t i =0; i<dist.size(); ++i) {
-        dist[i] = std::numeric_limits<float>::infinity();
-        visited[i] = false;
-    }
-
-    std::string s;
-
-    while(true) {
-        std::cout << "source vertex?: ";
-        std::cin >> s;
-        if(!(g.contains(s))) {
-            std::cout << "vertex '" << s << "' not found" << std::endl;
-            continue;
-        }
-
-        break;
-    }
-
-    frontier.insert(s);
-    dist[s] = 0.0;
-    visited[s] = true;
-
-    auto count = g.size();
-
-    while(!frontier.empty()) {
-
-        std::cout.flush();
-        float min_cost = std::numeric_limits<float>::infinity();
-        std::string  min_label;
-
-        std::set<std::string> frontier_delete_list;
-
-        for(const auto& v: frontier) {
-            bool visited_all = true;
-            for(const auto& [w, weight]: g[v]) {
-
-                float path_cost = dist[v] + weight;
-
-                if(visited[w]) continue;
-                else visited_all = false;
-
-                if(path_cost < min_cost) {
-                    min_cost = path_cost;
-                    min_label = w;
-                }
-            }
-            if(visited_all) {
-                frontier_delete_list.insert(v);
-            }
-        }
-
-
-        for(const auto& x: frontier_delete_list) {
-            frontier.erase(x);
-        }
-
-        if(min_label.empty()) break;
-        dist[min_label] = min_cost;
-        visited[min_label] = true;
-        frontier.insert(min_label);
-    }
-
-
-    std::cout << "DIST\tVERT\n";
-    for(auto& [v, x]: dist) {
-        std::cout << x << "\t" << v << '\n';
-    }
-    std::cout << std::endl;
-}
-#endif

@@ -54,7 +54,7 @@ cuda_graph_from_stl_graph(std::map<std::string, std::map<std::string, float>>& g
             auto it_loc = std::find(label_list.begin(), label_list.end(), v);
             size_t idx = std::distance(label_list.begin(), it_loc);
             assert(idx != label_list.size());
-            if(idx == label_list.size());
+            // if(idx == label_list.size()); 
             adj_list[i][k].idx =  idx;
             adj_list[i][k].weight = x;
             ++k;
@@ -66,7 +66,7 @@ cuda_graph_from_stl_graph(std::map<std::string, std::map<std::string, float>>& g
 
 
 std::tuple<label_list_t, size_t*, adj_vert_t**>
-load_soc_bitcon_graph() {
+load_soc_bitcoin_graph() {
     
     std::string fname = "soc-sign-bitcoinalpha.csv";
     auto file = std::ifstream(fname);
