@@ -9,7 +9,10 @@ objects += realloc_queue_vec.o
 
 .PHONY: all
 
-all: main
+all: release
+
+release: NVCCFLAGS += -O3
+release: main
 
 debug: NVCCFLAGS += --debug --device-debug
 debug: main

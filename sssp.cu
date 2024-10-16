@@ -38,7 +38,6 @@ void single_source_shortest_paths(
     unsigned int* dist,
     size_t start) {
     
-    DEBUG_PRINTLN;
     CUDA_SAFE_CALL(cudaMemset(dist, 0xFF, sizeof(unsigned int)*n_vertx));
 
     size_t* queue_vec;

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <iostream>
 #include <cstdlib>
+#include <cassert>
+
+#include <iostream>
 #include <string>
 
 #include <cuda.h>

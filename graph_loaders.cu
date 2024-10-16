@@ -1,6 +1,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+
 #include "graph_loaders.h"
 
 
@@ -52,11 +53,8 @@ cuda_graph_from_stl_graph(std::map<std::string, std::map<std::string, float>>& g
         const auto& adjs_of_i = g[label_list[i]];
         size_t k=0;
         for(const auto& [v, x]: adjs_of_i) {
-            // auto it_loc = std::find(label_list.begin(), label_list.end(), v);
-            // size_t idx = std::distance(label_list.begin(), it_loc);
             size_t idx = idx_list[v];
             assert(idx != label_list.size());
-            // if(idx == label_list.size()); 
             adj_list[i][k].idx =  idx;
             adj_list[i][k].weight = x;
             ++k;
@@ -99,8 +97,8 @@ static edge_t edge_from_tsv_string(std::string line) {
     return std::make_tuple(start, end, 1.0);
 }
 
-graph_t load_wiki_talk_graph() {
-    std::string fname = "wiki-Talk.txt";
+
+static graph_t tsv_file_graph(std::string fname) {
     auto file = std::ifstream(fname);
     std::string line;
     std::map<std::string, std::map<std::string, float>> g;
@@ -114,13 +112,44 @@ graph_t load_wiki_talk_graph() {
         std::string end = std::get<1>(edge);
         float weight = std::get<2>(edge);
 
-        (g[start])[end] = weight + 11;
+        (g[start])[end] = weight;
         g[end];
     }
     
     return cuda_graph_from_stl_graph(g);
-
 }
+
+graph_t load_wiki_talk_graph() {
+    std::string fname = "wiki-Talk.txt";
+    return tsv_file_graph(fname);
+}
+
+graph_t load_road_CA_graph() {
+    std::string fname = "roadNet-CA.txt";
+    return tsv_file_graph(fname);
+}
+
+graph_t load_road_PA_graph() {
+    std::string fname = "roadNet-PA.txt";
+    return tsv_file_graph(fname);
+}
+
+graph_t load_road_TX_graph() {
+    std::string fname = "roadNet-TX.txt";
+    return tsv_file_graph(fname);
+}
+
+graph_t load_skitter_graph() {
+    std::string fname = "as-skitter.txt";
+    return tsv_file_graph(fname);
+}
+
+graph_t load_cit_patent_graph() {
+    std::string fname = "cit-Patents.txt";
+    return tsv_file_graph(fname);
+}
+
+
 
 
 std::tuple<label_list_t, size_t*, adj_vert_t**>

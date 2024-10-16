@@ -17,40 +17,62 @@ void single_source_shortest_paths(size_t n_vertx,
                                   size_t s);
 
 int main(int argc, char** argv) {
-
-
-    std::tuple<label_list_t, size_t*, adj_vert_t**> graph;
+    using graph_t = std::tuple<label_list_t, size_t*, adj_vert_t**>;
+    using graph_fn = graph_t (*)(void);
+    
+    std::map<std::string, graph_fn> graph_loaders;
+    
+    graph_loaders["sample"] = load_sample_graph;
+    graph_loaders["bitcoin"] = load_soc_bitcoin_graph;
+    graph_loaders["wikitalk"] = load_wiki_talk_graph;
+    graph_loaders["ca-road"] = load_road_CA_graph;
+    graph_loaders["pa-road"] = load_road_PA_graph;
+    graph_loaders["tx-road"] = load_road_TX_graph;
+    graph_loaders["skitter"] = load_skitter_graph;
+    graph_loaders["patent"] = load_cit_patent_graph;
+    
+    graph_t graph;
     std::string s;
     size_t s_idx;
 
     auto setup_start = std::chrono::steady_clock::now();
-    if(argc == 2) {
-
+    if(argc >= 3) {
         std::string name(argv[1]);
-        if(name == "sample") {
-            graph = load_sample_graph();
-            s = "a";
+        s = argv[2];
+        try {
+            graph = (graph_loaders.at(name))();
         }
-        else if(name == "bitcoin") {
-            graph = load_soc_bitcoin_graph();
-            s = "3";
-        }
-        else if(name == "wikitalk") {
-            DEBUG_PRINTLN;
-            graph = load_wiki_talk_graph();
-            DEBUG_PRINTLN;
-            s = "3000";
-        }
-        else {
-            std::cout << "wrong graph: " << name << "\n";
+        catch(...) {
+            std::cout << "wrong graph: " << name << '\n';
             return 1;
         }
-    } else {
-        std::cout << "no graph specified\n";
+
+        {
+            auto vec = std::get<0>(graph);
+            auto start = vec.begin();
+            auto end = vec.end();
+            auto found = std::find(start, end, s);
+            if(found == end) {
+                std::cout << "vertex '" << s << "' not found in graph '"
+                          << name << "'\n";
+                return 1;
+            }
+        }
+
+        
+    }
+    else {
+        std::cout << "usage: <prog> <graph> <start>\n";
         return 1;
     }
+    
+    bool print_dist = false;
+    if(argc == 4) {
+        std::string arg3(argv[3]);
+        print_dist = (arg3 == "print");
+    }
+          
 
-    DEBUG_PRINTLN;
     auto& [label_list, adj_list_lens, adj_list] = graph;
     auto it_loc = std::find(label_list.begin(), label_list.end(), s);
     s_idx = std::distance(label_list.begin(), it_loc);
@@ -60,18 +82,17 @@ int main(int argc, char** argv) {
     CUDA_SAFE_CALL(cudaMallocManaged(&dist, sizeof(unsigned int)*label_list.size()));
     
     auto start = std::chrono::steady_clock::now();
-    DEBUG_PRINTLN;
     single_source_shortest_paths(label_list.size(), adj_list_lens, adj_list, dist, s_idx);
-    DEBUG_PRINTLN;
     cudaDeviceSynchronize();
     auto end = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end-start);
     auto setup_duration = std::chrono::duration_cast<std::chrono::microseconds>(start-setup_start);
 
-    DEBUG_COUT << "label list size: " << label_list.size() << std::endl;
-    std::cout << "DIST\tVERT\n";
-    for(size_t i=0; i<label_list.size(); ++i) {
-        std::cout << dist[i] << '\t' << label_list[i] <<  '\n';
+    if(print_dist) {
+        std::cout << "DIST\tVERT\n";
+        for(size_t i=0; i<label_list.size(); ++i) {
+            std::cout << dist[i] << '\t' << label_list[i] <<  '\n';
+        }
     }
 
     std::cout << "load time: " << setup_duration << '\n'
