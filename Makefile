@@ -1,11 +1,18 @@
 
 INCLUDES = -I./include
-NVCCFLAGS := --std c++20 --device-debug --debug $(INCLUDES) 
+NVCCFLAGS := --std c++20 $(INCLUDES)
 
-objects = main.o graph_loaders.o device_print_adj_list.o sssp.o setup_dist_arr.o edge_relax.o calc_queue_capacity.o
+objects := main.o
+objects += graph_loaders.o
+objects += sssp.o edge_relax.o
+objects += realloc_queue_vec.o
+
 .PHONY: all
 
 all: main
+
+debug: NVCCFLAGS += --debug --device-debug
+debug: main
 
 main: $(objects)
 	nvcc $^ -o main $(NVCCFLAGS)
@@ -16,20 +23,15 @@ main.o: main.cu include/graph_loaders.h
 graph_loaders.o: graph_loaders.cu include/graph_loaders.h
 	nvcc $< --compile $(NVCCFLAGS)
 
-device_print_adj_list.o: device_print_adj_list.cu
-	nvcc $< --compile $(NVCCFLAGS)	
-
-sssp.o: sssp.cu setup_dist_arr.cu edge_relax.cu include/graph_types.h include/debug_helpers.h 
+sssp.o: sssp.cu edge_relax.cu include/graph_types.h include/debug_helpers.h
 	nvcc $< --compile $(NVCCFLAGS)
 
-setup_dist_arr.o: setup_dist_arr.cu
+
+edge_relax.o: edge_relax.cu include/cuda_debug_helpers.h
 	nvcc $< --compile $(NVCCFLAGS)
 
-edge_relax.o: edge_relax.cu
-	nvcc $< --compile $(NVCCFLAGS)
-
-calc_queue_capacity.o: calc_queue_capacity.cu
+realloc_queue_vec.o: realloc_queue_vec.cu include/cuda_debug_helpers.h
 	nvcc $< --compile $(NVCCFLAGS)
 
 clean:
-	rm --force $(objects)
+	rm --force $(objects) main

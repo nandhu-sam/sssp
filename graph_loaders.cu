@@ -32,14 +32,15 @@ std::tuple<label_list_t, size_t*, adj_vert_t**>
 cuda_graph_from_stl_graph(std::map<std::string, std::map<std::string, float>>& g) {
 
     std::vector<std::string> label_list;
-    
+    std::map<std::string, size_t> idx_list;
     size_t count = 0;
     for(const auto& [vert, adjs]: g) {
         label_list.push_back(vert);
-        count++;    
+        idx_list[vert] = count;
+        count++;
     }
 
-
+    
     size_t* adj_list_lengths;
     adj_vert_t** adj_list;
     CUDA_SAFE_CALL(cudaMallocManaged(&adj_list_lengths, sizeof(size_t)*label_list.size()));
@@ -51,8 +52,9 @@ cuda_graph_from_stl_graph(std::map<std::string, std::map<std::string, float>>& g
         const auto& adjs_of_i = g[label_list[i]];
         size_t k=0;
         for(const auto& [v, x]: adjs_of_i) {
-            auto it_loc = std::find(label_list.begin(), label_list.end(), v);
-            size_t idx = std::distance(label_list.begin(), it_loc);
+            // auto it_loc = std::find(label_list.begin(), label_list.end(), v);
+            // size_t idx = std::distance(label_list.begin(), it_loc);
+            size_t idx = idx_list[v];
             assert(idx != label_list.size());
             // if(idx == label_list.size()); 
             adj_list[i][k].idx =  idx;
@@ -60,6 +62,7 @@ cuda_graph_from_stl_graph(std::map<std::string, std::map<std::string, float>>& g
             ++k;
         }
     }
+
 
     return std::make_tuple(label_list, adj_list_lengths, adj_list);
 }
@@ -89,10 +92,34 @@ load_soc_bitcoin_graph() {
     return cuda_graph_from_stl_graph(g);
 }
 
+static edge_t edge_from_tsv_string(std::string line) {
+    std::stringstream str(line);
+    std::string start, end;
+    str >> start >> end;
+    return std::make_tuple(start, end, 1.0);
+}
 
 graph_t load_wiki_talk_graph() {
     std::string fname = "wiki-Talk.txt";
-    return graph_from_tsv(fname);
+    auto file = std::ifstream(fname);
+    std::string line;
+    std::map<std::string, std::map<std::string, float>> g;
+
+    while(std::getline(file, line, '\n')) {
+        if(line.starts_with('#')) continue;
+      
+        auto edge = edge_from_tsv_string(line);
+        
+        std::string start = std::get<0>(edge);
+        std::string end = std::get<1>(edge);
+        float weight = std::get<2>(edge);
+
+        (g[start])[end] = weight + 11;
+        g[end];
+    }
+    
+    return cuda_graph_from_stl_graph(g);
+
 }
 
 
