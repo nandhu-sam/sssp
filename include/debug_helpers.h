@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <cstdlib>
 #include <string>
 
 #include <cuda.h>
@@ -29,6 +30,7 @@ static inline cudaError_t checkCuda(cudaError_t e, std::string file, int line) {
         std::cerr << file << ':' << line << ": "
                   << cudaGetErrorName(e) << ": "
                   << cudaGetErrorString(e) << std::endl;
+        exit(1);
     }
     return e;
 }

@@ -3,7 +3,7 @@
 
 #define MIN(a, b) ((a)<(b))?((a)):((b))
 
-__global__ void setup_dist_arr(float* dist, size_t n_vertx) {
+__global__ void setup_dist_arr(unsigned int* dist, size_t n_vertx) {
     
     size_t start_idx = (1024*threadIdx.x) + (1024*1024*blockIdx.x);
     size_t end_idx = MIN(start_idx + 1024, n_vertx);

@@ -1,8 +1,8 @@
 
 INCLUDES = -I./include
-NVCCFLAGS := --std c++20 --debug $(INCLUDES)
+NVCCFLAGS := --std c++20 --device-debug --debug $(INCLUDES) 
 
-objects = main.o graph_loaders.o device_print_adj_list.o sssp.o setup_dist_arr.o edge_relax.o
+objects = main.o graph_loaders.o device_print_adj_list.o sssp.o setup_dist_arr.o edge_relax.o calc_queue_capacity.o
 .PHONY: all
 
 all: main
@@ -26,7 +26,10 @@ setup_dist_arr.o: setup_dist_arr.cu
 	nvcc $< --compile $(NVCCFLAGS)
 
 edge_relax.o: edge_relax.cu
-	nvcc $< --compile $(NVCCFLAGS)	
+	nvcc $< --compile $(NVCCFLAGS)
+
+calc_queue_capacity.o: calc_queue_capacity.cu
+	nvcc $< --compile $(NVCCFLAGS)
 
 clean:
 	rm --force $(objects)

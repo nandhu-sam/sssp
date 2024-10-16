@@ -89,12 +89,13 @@ load_soc_bitcoin_graph() {
     return cuda_graph_from_stl_graph(g);
 }
 
-/*
+
 graph_t load_wiki_talk_graph() {
     std::string fname = "wiki-Talk.txt";
     return graph_from_tsv(fname);
 }
-*/
+
+
 std::tuple<label_list_t, size_t*, adj_vert_t**>
 load_sample_graph() {
     std::map<std::string, std::map<std::string, float>> g;

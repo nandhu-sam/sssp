@@ -22,7 +22,7 @@ extern __global__ void device_print_adj_list(size_t* adj_list_lens, size_t n_ver
 void single_source_shortest_paths(size_t n_vertx,
                                   size_t* adj_lens,
                                   adj_vert_t** adj_list,
-                                  float* dist,
+                                  unsigned int* dist,
                                   size_t s);
 
 int main(int argc, char** argv) {
@@ -30,8 +30,8 @@ int main(int argc, char** argv) {
     std::tuple<label_list_t, size_t*, adj_vert_t**> graph;
     std::string s;
     size_t s_idx;
-
-
+    
+    auto setup_start = std::chrono::steady_clock::now();
     if(argc == 2) {
 
         std::string name(argv[1]);
@@ -56,30 +56,25 @@ int main(int argc, char** argv) {
     auto& [label_list, adj_list_lens, adj_list] = graph;
     auto it_loc = std::find(label_list.begin(), label_list.end(), s);
     s_idx = std::distance(label_list.begin(), it_loc);
-            
 
-    float* dist;
-    CUDA_SAFE_CALL(cudaMallocManaged(&dist, sizeof(float)*label_list.size()));
-
-
-
-    // while(false) {
-    //     std::cout << "source vertex?: ";
-    //     std::cin >> s;
-    //     auto it_loc = std::find(label_list.begin(), label_list.end(), s);
-    //     if(it_loc == label_list.end()) {
-    //         std::cout << "vertex '" << s << "' not found" << std::endl;
-    //         continue;
-    //     }
-    //     s_idx = std::distance(label_list.begin(), it_loc);
-    //     break;
-    // }
-
+    
+    unsigned int* dist;
+    CUDA_SAFE_CALL(cudaMallocManaged(&dist, sizeof(unsigned int)*label_list.size()));
+    
+    auto start = std::chrono::steady_clock::now();
     single_source_shortest_paths(label_list.size(), adj_list_lens, adj_list, dist, s_idx);
     cudaDeviceSynchronize();
+    auto end = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end-start);
+    auto setup_duration = std::chrono::duration_cast<std::chrono::microseconds>(start-setup_start);
 
-    // for(size_t i=0; i<label_list.size(); ++i) {
-    //     std::cout << dist[i] << " = " << label_list[i] <<  '\n';
-    // }
+    
+    std::cout << "DIST\tVERT\n";
+    for(size_t i=0; i<label_list.size(); ++i) {
+        std::cout << dist[i] << '\t' << label_list[i] <<  '\n';
+    }
+
+    std::cout << "load time: " << setup_duration << '\n'
+              << "exec time: " << duration << std::endl;
 
 }
