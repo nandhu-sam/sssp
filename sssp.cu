@@ -58,7 +58,7 @@ void single_source_shortest_paths(
         relax_edges<<<1, dim3(32, 32, 1)>>>
             (queue_vec, *queue_size, future_queue_bits, n_vertx, adj_list, adj_lens, dist);
 
-        realloc_queue_vec<<<1, 1>>>(queue_vec, queue_size,
+        realloc_queue_vec<<<1, 1024>>>(queue_vec, queue_size,
                                     future_queue_bits,
                                     n_vertx);
         

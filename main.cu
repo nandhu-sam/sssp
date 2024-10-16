@@ -19,9 +19,11 @@ void single_source_shortest_paths(size_t n_vertx,
 int main(int argc, char** argv) {
     using graph_t = std::tuple<label_list_t, size_t*, adj_vert_t**>;
     using graph_fn = graph_t (*)(void);
-    
+
+
     std::map<std::string, graph_fn> graph_loaders;
-    
+
+
     graph_loaders["sample"] = load_sample_graph;
     graph_loaders["bitcoin"] = load_soc_bitcoin_graph;
     graph_loaders["wikitalk"] = load_wiki_talk_graph;
@@ -30,7 +32,8 @@ int main(int argc, char** argv) {
     graph_loaders["tx-road"] = load_road_TX_graph;
     graph_loaders["skitter"] = load_skitter_graph;
     graph_loaders["patent"] = load_cit_patent_graph;
-    
+
+
     graph_t graph;
     std::string s;
     size_t s_idx;
@@ -59,34 +62,45 @@ int main(int argc, char** argv) {
             }
         }
 
-        
+
+
     }
     else {
         std::cout << "usage: <prog> <graph> <start>\n";
         return 1;
     }
-    
+
+
     bool print_dist = false;
     if(argc == 4) {
         std::string arg3(argv[3]);
         print_dist = (arg3 == "print");
     }
-          
+
+
 
     auto& [label_list, adj_list_lens, adj_list] = graph;
     auto it_loc = std::find(label_list.begin(), label_list.end(), s);
     s_idx = std::distance(label_list.begin(), it_loc);
 
-    
+
+
     unsigned int* dist;
     CUDA_SAFE_CALL(cudaMallocManaged(&dist, sizeof(unsigned int)*label_list.size()));
-    
-    auto start = std::chrono::steady_clock::now();
+
+
+    using std::chrono::steady_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::microseconds;
+    using std::chrono::milliseconds;
+    using std::chrono::seconds;
+
+    auto start = steady_clock::now();
     single_source_shortest_paths(label_list.size(), adj_list_lens, adj_list, dist, s_idx);
     cudaDeviceSynchronize();
-    auto end = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end-start);
-    auto setup_duration = std::chrono::duration_cast<std::chrono::microseconds>(start-setup_start);
+    auto end = steady_clock::now();
+    auto duration = duration_cast<microseconds>(end-start);
+    auto setup_duration = duration_cast<microseconds>(start-setup_start);
 
     if(print_dist) {
         std::cout << "DIST\tVERT\n";
@@ -95,7 +109,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cout << "load time: " << setup_duration << '\n'
-              << "exec time: " << duration << std::endl;
+    std::cout << "load time: "
+              << setup_duration << '\t'
+              << duration_cast<milliseconds>(setup_duration) << '\t'
+              << duration_cast<seconds>(setup_duration)
+              << '\n'
+              << "exec time: " << duration << '\t'
+              << duration_cast<milliseconds>(duration) << '\t'
+              << duration_cast<seconds>(duration)
+              << std::endl;
 
 }
