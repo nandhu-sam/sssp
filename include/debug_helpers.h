@@ -16,11 +16,11 @@ static inline auto& putstr(std::string s) { return (std::cout << s); }
 #define CUDA_SAFE_CALL(stmt) checkCuda((stmt), __FILE__, __LINE__)
 #define DEBUG_PRINT \
   putstr(std::string(__FILE__) + ":" + std::to_string(__LINE__) \
-           + " [" + std::string(__func__) + "] ")
+         + std::string(" [") + std::string(__func__) + std::string("] "))
 
 #define DEBUG_PRINTLN \
   putstrln(std::string(__FILE__) + ":" + std::to_string(__LINE__) \
-           + " [" + std::string(__func__) + "] ")
+           + std::string(" [") + std::string(__func__) + std::string("] "))
 
 #define DEBUG_COUT \
   (std::cout << std::string(__FILE__) + ":" + std::to_string(__LINE__) \

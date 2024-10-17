@@ -52,13 +52,16 @@ void single_source_shortest_paths(
     queue_vec[*queue_size] = start;
     (*queue_size)++;
     dist[start] = 0.0;
-    
-    while(*queue_size) {
-        CUDA_SAFE_CALL(cudaDeviceSynchronize());
-        relax_edges<<<1, dim3(32, 32, 1)>>>
-            (queue_vec, *queue_size, future_queue_bits, n_vertx, adj_list, adj_lens, dist);
 
-        realloc_queue_vec<<<1, 1024>>>(queue_vec, queue_size,
+    size_t iterations = 0;
+    while(*queue_size) {
+        iterations++;
+        CUDA_SAFE_CALL(cudaDeviceSynchronize());
+        relax_edges<<<1, dim3(16, 16, 1)>>>
+            (queue_vec, *queue_size, future_queue_bits, n_vertx, adj_list, adj_lens, dist);
+        CUDA_SAFE_CALL(cudaDeviceSynchronize());
+
+        realloc_queue_vec<<<1, 256>>>(queue_vec, queue_size,
                                     future_queue_bits,
                                     n_vertx);
         

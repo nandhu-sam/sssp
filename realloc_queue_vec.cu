@@ -6,13 +6,12 @@ __global__ void realloc_queue_vec(size_t* queue, unsigned int* queue_size,
     size_t tid = threadIdx.x + threadIdx.y * blockDim.x;
     size_t n_threads = blockDim.x * blockDim.y * blockDim.z;
     if(tid == 0) *queue_size = 0;
+
     __syncthreads();
     
-    for(int i=tid; i < n_vertx; i += n_threads) {
+    for(size_t i=tid; i < n_vertx; i += n_threads) {
         if(bits[i]) {
             size_t idx = atomicInc(queue_size, n_vertx);
-            queue[idx] = (size_t)i;
-        }
+            queue[idx] = (size_t)i;}
     }
-
 }
